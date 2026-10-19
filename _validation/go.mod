@@ -1,6 +1,6 @@
 module github.com/gpdf-dev/gpdf/validation
 
-go 1.24
+go 1.25.0
 
 replace github.com/gpdf-dev/gpdf => ../
 
@@ -15,7 +15,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/image v0.21.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/image v0.41.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
