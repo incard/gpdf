@@ -29,6 +29,8 @@ type Style struct {
 	Margin  Edges
 	Padding Edges
 	Border  BorderEdges
+	// BorderRadius rounds the corners of the background, and clips images.
+	BorderRadius Value
 }
 
 // DefaultStyle returns a Style with sensible defaults: 12pt black text,

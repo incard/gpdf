@@ -38,6 +38,8 @@ type BoxStyle struct {
 	Background *pdf.Color
 	Direction  Direction
 	Position   Position
+	// BorderRadius rounds the corners of Background.
+	BorderRadius Value
 }
 
 // NodeType returns NodeBox.
@@ -49,9 +51,10 @@ func (b *Box) Children() []DocumentNode { return b.Content }
 // Style constructs a Style from the BoxStyle's spacing and decoration fields.
 func (b *Box) Style() Style {
 	return Style{
-		Margin:     b.BoxStyle.Margin,
-		Padding:    b.BoxStyle.Padding,
-		Border:     b.BoxStyle.Border,
-		Background: b.BoxStyle.Background,
+		Margin:       b.BoxStyle.Margin,
+		Padding:      b.BoxStyle.Padding,
+		Border:       b.BoxStyle.Border,
+		Background:   b.BoxStyle.Background,
+		BorderRadius: b.BoxStyle.BorderRadius,
 	}
 }

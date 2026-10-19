@@ -467,15 +467,18 @@ func (r *PDFRenderer) renderPlacedNode(pn layout.PlacedNode, offsetX, offsetY fl
 	absY := pn.Position.Y + offsetY
 
 	style := pn.Node.Style()
+	bounds := document.Rectangle{X: absX, Y: absY, Width: pn.Size.Width, Height: pn.Size.Height}
+	radius := style.BorderRadius.Resolve(pn.Size.Width, style.FontSize)
 
 	// Render background if present.
 	if style.Background != nil {
-		if err := r.RenderRect(document.Rectangle{
-			X:      absX,
-			Y:      absY,
-			Width:  pn.Size.Width,
-			Height: pn.Size.Height,
-		}, RectStyle{FillColor: style.Background}); err != nil {
+		var err error
+		if radius > 0 {
+			err = r.RenderPath(roundedRect(bounds, radius), PathStyle{FillColor: style.Background})
+		} else {
+			err = r.RenderRect(bounds, RectStyle{FillColor: style.Background})
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -505,8 +508,18 @@ func (r *PDFRenderer) renderPlacedNode(pn layout.PlacedNode, offsetX, offsetY fl
 	case document.NodeImage:
 		imgNode, ok := pn.Node.(*document.Image)
 		if ok {
+			if radius > 0 {
+				var clip strings.Builder
+				clip.WriteString("q\n")
+				r.writePathSegments(&clip, roundedRect(bounds, radius))
+				clip.WriteString("W n\n")
+				r.pageContent = append(r.pageContent, clip.String()...)
+			}
 			if err := r.RenderImage(imgNode.Source, document.Point{X: absX, Y: absY}, pn.Size); err != nil {
 				return err
+			}
+			if radius > 0 {
+				r.pageContent = append(r.pageContent, "Q\n"...)
 			}
 		}
 	case document.NodeRichText:
@@ -516,6 +529,33 @@ func (r *PDFRenderer) renderPlacedNode(pn layout.PlacedNode, offsetX, offsetY fl
 
 	// Render children with this node's absolute position as offset.
 	return r.renderPlacedNodes(pn.Children, absX, absY)
+}
+
+// roundedRect is rect with each corner a quarter circle of radius r,
+// drawn as a cubic Bézier.
+func roundedRect(rect document.Rectangle, r float64) document.Path {
+	r = min(r, rect.Width/2, rect.Height/2)
+	k := r * 0.5522847498 // control point offset for a circular arc
+	x0, y0, x1, y1 := rect.X, rect.Y, rect.X+rect.Width, rect.Y+rect.Height
+	pt := func(x, y float64) document.Point { return document.Point{X: x, Y: y} }
+	curve := func(c1, c2, end document.Point) document.PathSegment {
+		return document.PathSegment{Op: document.PathCurveTo, Points: []document.Point{c1, c2, end}}
+	}
+	line := func(p document.Point) document.PathSegment {
+		return document.PathSegment{Op: document.PathLineTo, Points: []document.Point{p}}
+	}
+	return document.Path{Segments: []document.PathSegment{
+		{Op: document.PathMoveTo, Points: []document.Point{pt(x0+r, y0)}},
+		line(pt(x1-r, y0)),
+		curve(pt(x1-r+k, y0), pt(x1, y0+r-k), pt(x1, y0+r)),
+		line(pt(x1, y1-r)),
+		curve(pt(x1, y1-r+k), pt(x1-r+k, y1), pt(x1-r, y1)),
+		line(pt(x0+r, y1)),
+		curve(pt(x0+r-k, y1), pt(x0, y1-r+k), pt(x0, y1-r)),
+		line(pt(x0, y0+r)),
+		curve(pt(x0, y0+r-k), pt(x0+r-k, y0), pt(x0+r, y0)),
+		{Op: document.PathClose},
+	}}
 }
 
 // renderTextDecoration draws underline, strikethrough, and/or overline
